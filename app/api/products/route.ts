@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
@@ -13,27 +15,7 @@ export async function GET() {
       },
     });
 
-    const formattedProducts = products.map((product) => ({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: product.price,
-
-      inventory: product.inventories.map((inventory) => ({
-        id: inventory.id,
-        warehouseId: inventory.warehouse.id,
-        warehouseName: inventory.warehouse.name,
-        location: inventory.warehouse.location,
-
-        totalStock: inventory.totalStock,
-        reservedStock: inventory.reservedStock,
-
-        availableStock:
-          inventory.totalStock - inventory.reservedStock,
-      })),
-    }));
-
-    return NextResponse.json(formattedProducts);
+    return NextResponse.json(products);
   } catch (error) {
     console.error(error);
 
