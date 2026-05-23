@@ -1,74 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
 
   try {
 
-    const { id: reservationId } = await params;
+    const { prisma } = await import("@/lib/prisma");
 
-    const result =
-      await prisma.$transaction(async (tx) => {
+    const { id } = await context.params;
 
-        const reservation =
-          await tx.reservation.findUnique({
-            where: {
-              id: reservationId,
-            },
-          });
+    const result = await prisma.$transaction(async (tx) => {
 
-        if (!reservation) {
-
-          return {
-            error: "Reservation not found",
-            status: 404,
-          };
-        }
-
-        if (
-          reservation.status !== "PENDING" ||
-          reservation.expiresAt < new Date()
-        ) {
-
-          await tx.reservation.update({
-            where: {
-              id: reservation.id,
-            },
-            data: {
-              status: "EXPIRED",
-            },
-          });
-
-          return {
-            error: "Reservation expired",
-            status: 410,
-          };
-        }
-
-        const confirmedReservation =
-          await tx.reservation.update({
-            where: {
-              id: reservation.id,
-            },
-            data: {
-              status: "CONFIRMED",
-              confirmedAt: new Date(),
-            },
-          });
-
-        return confirmedReservation;
+      const reservation = await tx.reservation.findUnique({
+        where: {
+          id,
+        },
       });
 
-    if ("error" in result) {
+      if (!reservation) {
+        throw new Error("Reservation not found");
+      }
 
-      return NextResponse.json(
-        { error: result.error },
-        { status: result.status }
-      );
-    }
+      const updatedReservation =
+        await tx.reservation.update({
+          where: {
+            id,
+          },
+          data: {
+            status: "CONFIRMED",
+            confirmedAt: new Date(),
+          },
+        });
+
+      return updatedReservation;
+    });
 
     return NextResponse.json(result);
 
