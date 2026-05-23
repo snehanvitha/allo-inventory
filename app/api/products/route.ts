@@ -1,22 +1,59 @@
 import { NextResponse } from "next/server";
-
-export const dynamic = "force-dynamic";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  try {
-    const { prisma } = await import("@/lib/prisma");
 
-    const products = await prisma.product.findMany({
-      include: {
-        inventories: {
-          include: {
-            warehouse: true,
+  try {
+
+    const products =
+      await prisma.product.findMany({
+
+        include: {
+          inventories: {
+            include: {
+              warehouse: true,
+            },
           },
         },
-      },
-    });
 
-    return NextResponse.json(products);
+      });
+
+    const formattedProducts =
+      products.map((product) => ({
+
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+
+        inventories:
+          product.inventories.map((inventory) => ({
+
+            id: inventory.id,
+
+            warehouseName:
+              inventory.warehouse.name,
+
+            location:
+              inventory.warehouse.location,
+
+            totalStock:
+              inventory.totalStock,
+
+            reservedStock:
+              inventory.reservedStock,
+
+            availableStock:
+              inventory.totalStock -
+              inventory.reservedStock,
+
+          })),
+
+      }));
+
+    return NextResponse.json(
+      formattedProducts
+    );
 
   } catch (error) {
 
