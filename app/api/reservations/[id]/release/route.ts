@@ -5,61 +5,64 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+
   try {
 
     const { id: reservationId } = await params;
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result =
+      await prisma.$transaction(async (tx) => {
 
-      const reservation = await tx.reservation.findUnique({
-        where: {
-          id: reservationId,
-        },
-      });
+        const reservation =
+          await tx.reservation.findUnique({
+            where: {
+              id: reservationId,
+            },
+          });
 
-      if (!reservation) {
-        return {
-          error: "Reservation not found",
-          status: 404,
-        };
-      }
+        if (!reservation) {
 
-      // Prevent releasing already completed reservation
-      if (reservation.status !== "PENDING") {
-        return {
-          error: "Reservation cannot be released",
-          status: 400,
-        };
-      }
+          return {
+            error: "Reservation not found",
+            status: 404,
+          };
+        }
 
-      // Decrease reserved stock
-      await tx.inventory.update({
-        where: {
-          id: reservation.inventoryId,
-        },
-        data: {
-          reservedStock: {
-            decrement: reservation.quantity,
-          },
-        },
-      });
+        if (reservation.status !== "PENDING") {
 
-      // Mark reservation released
-      const releasedReservation =
-        await tx.reservation.update({
+          return {
+            error: "Reservation cannot be released",
+            status: 400,
+          };
+        }
+
+        await tx.inventory.update({
           where: {
-            id: reservation.id,
+            id: reservation.inventoryId,
           },
           data: {
-            status: "RELEASED",
-            releasedAt: new Date(),
+            reservedStock: {
+              decrement: reservation.quantity,
+            },
           },
         });
 
-      return releasedReservation;
-    });
+        const releasedReservation =
+          await tx.reservation.update({
+            where: {
+              id: reservation.id,
+            },
+            data: {
+              status: "RELEASED",
+              releasedAt: new Date(),
+            },
+          });
+
+        return releasedReservation;
+      });
 
     if ("error" in result) {
+
       return NextResponse.json(
         { error: result.error },
         { status: result.status }
@@ -69,6 +72,7 @@ export async function POST(
     return NextResponse.json(result);
 
   } catch (error) {
+
     console.error(error);
 
     return NextResponse.json(

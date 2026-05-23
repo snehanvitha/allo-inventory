@@ -2,6 +2,7 @@
 
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Inventory {
   id: string;
@@ -24,6 +25,7 @@ export default function HomePage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   async function fetchProducts() {
     try {
@@ -55,9 +57,9 @@ export default function HomePage() {
           quantity: 1,
         });
 
-      alert(
-        `Reservation created: ${response.data.id}`
-      );
+      router.push(
+  `/reservation/${response.data.id}`
+);
 
       fetchProducts();
 
@@ -135,16 +137,26 @@ export default function HomePage() {
                   </div>
 
                   <button
-                    onClick={() =>
-                      reserveProduct(inventory.id)
-                    }
-                    disabled={
-                      inventory.availableStock <= 0
-                    }
-                    className="bg-black text-white px-4 py-2 rounded-lg disabled:bg-gray-400"
-                  >
-                    Reserve
-                  </button>
+  onClick={() =>
+    reserveProduct(inventory.id)
+  }
+
+  disabled={
+    inventory.availableStock <= 0
+  }
+
+  className="
+    bg-black
+    text-white
+    px-4
+    py-2
+    rounded-lg
+    disabled:bg-gray-400
+    disabled:cursor-not-allowed
+  "
+>
+  Reserve
+</button>
 
                 </div>
 

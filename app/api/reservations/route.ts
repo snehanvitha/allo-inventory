@@ -1,77 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { reservationSchema } from "@/lib/validators/reservation";
 
 export async function POST(req: NextRequest) {
   try {
+
     const body = await req.json();
 
-    const validatedData = reservationSchema.parse(body);
+    const inventoryId = body.inventoryId;
+    const quantity = Number(body.quantity);
 
-    const { inventoryId, quantity } = validatedData;
+    console.log("BODY:", body);
 
-    const reservation = await prisma.$transaction(async (tx) => {
-
-      // Fetch inventory
-      const inventory = await tx.inventory.findUnique({
+    const inventory =
+      await prisma.inventory.findUnique({
         where: {
           id: inventoryId,
         },
       });
 
-      if (!inventory) {
-        throw new Error("Inventory not found");
-      }
+    console.log("INVENTORY:", inventory);
 
-      const availableStock =
-        inventory.totalStock - inventory.reservedStock;
+    if (!inventory) {
 
-      // Prevent overselling
-      if (availableStock < quantity) {
-        return {
-          error: "Not enough stock available",
-          status: 409,
-        };
-      }
+      return NextResponse.json(
+        { error: "Inventory not found" },
+        { status: 404 }
+      );
+    }
 
-      // Reserve stock atomically
-      await tx.inventory.update({
-        where: {
-          id: inventoryId,
+    const availableStock =
+      inventory.totalStock -
+      inventory.reservedStock;
+
+    if (availableStock < quantity) {
+
+      return NextResponse.json(
+        { error: "Not enough stock available" },
+        { status: 409 }
+      );
+    }
+
+    await prisma.inventory.update({
+      where: {
+        id: inventoryId,
+      },
+      data: {
+        reservedStock: {
+          increment: quantity,
         },
-        data: {
-          reservedStock: {
-            increment: quantity,
-          },
-        },
-      });
+      },
+    });
 
-      // Create reservation
-      const reservation = await tx.reservation.create({
+    const reservation =
+      await prisma.reservation.create({
         data: {
           inventoryId,
           quantity,
-
           expiresAt: new Date(
             Date.now() + 10 * 60 * 1000
           ),
         },
       });
 
-      return reservation;
-    });
-
-    if ("error" in reservation) {
-      return NextResponse.json(
-        { error: reservation.error },
-        { status: reservation.status }
-      );
-    }
-
+    console.log("RESERVATION:", reservation);
     return NextResponse.json(reservation);
 
   } catch (error) {
-    console.error(error);
+
+    console.error("POST ERROR:", error);
 
     return NextResponse.json(
       { error: "Failed to create reservation" },

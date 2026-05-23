@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const reservationSchema = z.object({
-  inventoryId: z.string(),
-  quantity: z.number().min(1),
+  inventoryId: z.string().min(1),
+
+  quantity: z.coerce.number().min(1),
 });
