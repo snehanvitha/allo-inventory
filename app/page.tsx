@@ -18,7 +18,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  inventory: Inventory[];
+  inventories: Inventory[];
 }
 
 export default function HomePage() {
@@ -113,7 +113,7 @@ export default function HomePage() {
 
             <div className="mt-5 grid gap-3">
 
-              {product.inventory.map((inventory) => (
+              {product.inventories.map((inventory) => (
 
                 <div
                   key={inventory.id}
