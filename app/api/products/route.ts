@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const { prisma } = await import("@/lib/prisma");
+
     const products = await prisma.product.findMany({
       include: {
         inventories: {
@@ -16,7 +17,9 @@ export async function GET() {
     });
 
     return NextResponse.json(products);
+
   } catch (error) {
+
     console.error(error);
 
     return NextResponse.json(
